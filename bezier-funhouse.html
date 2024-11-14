@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>a Bézier funhouse</title</title>
 
-    <script id="glsl/trace-vs.c" type="x-shader/x-vertex">
+    <script id="glsl/trace-vs.c" type="glsl">
 //
 // trace-vs.c
 //
@@ -47,7 +47,7 @@ void main(void) {
 }
     </script>
 
-    <script id="glsl/trace-fs.c" type="x-shader/x-vertex">
+    <script id="glsl/trace-fs.c" type="glsl">
 //
 // trace-fs.c
 //
@@ -853,7 +853,7 @@ void main(void) {
     </script>
 
     
-    <script id="glsl/vs-varying-color.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-varying-color.c" type="glsl">
 //
 // vs-varying-color.c
 //
@@ -881,7 +881,7 @@ void main(void) {
   color = aVertexColor;
 }
     </script>
-    <script id="glsl/fs-color.c" type="x-shader/x-fragment">
+    <script id="glsl/fs-color.c" type="glsl">
 //
 // fs-color.c
 //
@@ -896,7 +896,7 @@ void main(void) {
   gl_FragColor = color;
 }
     </script>
-    <script id="glsl/vs-uniform-material.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-uniform-material.c" type="glsl">
 //
 // vs-uniform-material.c
 //
@@ -941,7 +941,7 @@ void main() {
   place = gl_Position;
 }
     </script>
-    <script id="glsl/vs-varying-material.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-varying-material.c" type="glsl">
 //
 // vs-varying-material.c
 //
@@ -987,7 +987,7 @@ void main() {
 
 }
     </script>
-    <script id="glsl/fs-phong.c" type="x-shader/x-fragment">
+    <script id="glsl/fs-phong.c" type="glsl">
 //
 // fs-phong.c
 //
@@ -1061,7 +1061,7 @@ void main() {
 }
     </script>
 
-    <script id="glsl/vs-uniform-color.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-uniform-color.c" type="glsl">
 //
 // vs-uniform-color.c
 //
@@ -1089,7 +1089,7 @@ void main(void) {
   color = uColor;
 }
     </script>
-    <script id="glsl/vs-varying-color.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-varying-color.c" type="glsl">
 //
 // vs-varying-color.c
 //
@@ -1117,7 +1117,7 @@ void main(void) {
   color = aVertexColor;
 }
     </script>
-    <script id="glsl/fs-color.c" type="x-shader/x-fragment">
+    <script id="glsl/fs-color.c" type="glsl">
 //
 // fs-color.c
 //
@@ -1132,7 +1132,7 @@ void main(void) {
   gl_FragColor = color;
 }
     </script>
-    <script id="glsl/vs-uniform-material.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-uniform-material.c" type="glsl">
 //
 // vs-uniform-material.c
 //
@@ -1177,7 +1177,7 @@ void main() {
   place = gl_Position;
 }
     </script>
-    <script id="glsl/vs-varying-material.c" type="x-shader/x-vertex">
+    <script id="glsl/vs-varying-material.c" type="glsl">
 //
 // vs-varying-material.c
 //
@@ -1223,7 +1223,7 @@ void main() {
     
 }
     </script>
-    <script id="glsl/fs-phong.c" type="x-shader/x-fragment">
+    <script id="glsl/fs-phong.c" type="glsl">
 //
 // fs-phong.c
 //
