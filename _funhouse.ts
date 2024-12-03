@@ -18,18 +18,37 @@
 // ------
 //
 
+import { Point3d } from "./_geometry-3d";
+
+type Color = { r: number, g: number, b: number }
+declare function glPushMatrix(): void
+declare function glPopMatrix(): void
+declare function glTranslatef(tx: number, ty: number, tz: number): void
+declare function glRotatef(angle: number, axis_x: number, axis_y: number, axis_z: number): void
+declare function glScalef(sx: number, sy: number, sz: number): void
+declare function glColor3f(r: number, g: number, b: number): void
+declare function glBeginEnd(name: string): void
+declare function glEnable(mode: number): void
+declare function glDisable(mode: number): void
+declare var GL_LIGHTING: number
+declare var GL_LIGHT0: number
+declare var gPOINT_COLOR: Color
+declare var gCURVE_COLOR: Color
 
 const MINIMUM_PLACEMENT_SCALE = 0.1; // Smallest sphere we can place.
 const MAX_SELECT_DISTANCE = 0.2;     // Distance to select a control point.
 const SMOOTHNESS = 500.0;            // How smooth is our curve approx?
 const EPSILON = 0.00000001;
 
-
 class Sphere {
+    color: Color;
+    position: Point3d;
+    radius: number;
+
     //
     // Class representing the placement a sphere in the scene.
     //
-    constructor(color, position0) {
+    constructor(color: Color, position0: Point3d) {
         //
         // `position`, `radius`: a `point` and number,
         //  representing the location and size of a
@@ -40,7 +59,7 @@ class Sphere {
         this.radius      = MINIMUM_PLACEMENT_SCALE;
     }
     
-    resize(scale, bounds) {
+    resize(scale: number, bounds) {
         //
         // Resize the sphere.  Some checks prevent growing it beyond
         // the scene bounds.
@@ -65,7 +84,7 @@ class Sphere {
         this.position = position;
     }
 
-    includes(queryPoint) {
+    includes(queryPoint: Point3d): boolean {
         //
         // Checks whether the `queryPoint` lives within its footprint.
         //
@@ -73,7 +92,7 @@ class Sphere {
         return (distance < this.radius*this.radius);
     }
 
-    draw(highlightColor, drawBase, drawShaded) {
+    draw(highlightColor, drawBase, drawShaded: boolean) {
         //
         // Draws the sphere within the current WebGL/opengl context.
         //
@@ -112,6 +131,10 @@ class Sphere {
 
 
 class Curve {
+    controlPoints: Point3d[];
+    points: Point3d[];
+    compiled: boolean;
+
     //
     // Class representing a controllable Bezier quadratic curve in a
     // scene.
@@ -122,7 +145,7 @@ class Curve {
     // edited. This will trigger a "recompiling" of the points of the
     // polyline used to render the Bezier curve. 
     //
-    constructor(controlPoints) {
+    constructor(controlPoints: Point3d[]) {
         this.controlPoints = controlPoints; // Should be an array of 3 Point3d objects.
         //
         this.points        = [];    // The samples for the approximation of the curve.
@@ -163,7 +186,7 @@ class Curve {
         this.compiled = false;
     }
 
-    chooseControlPoint(queryPoint) {
+    chooseControlPoint(queryPoint: Point3d): number {
         //
         // Returns the integer index (0, 1, or 2) of the closest
         // control point to the given `queryPoint`, or -1 if none
