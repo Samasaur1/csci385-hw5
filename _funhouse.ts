@@ -169,12 +169,25 @@ class Curve {
             // COMPLETE THIS CODE!
             //
 
-            // Currently just returns the three control points, rather
-            // than sampling points on the entire curve.
-            //
-            this.points = [this.controlPoints[0],
-                           this.controlPoints[1],
-                           this.controlPoints[2]];
+            var p0 = this.controlPoints[0];
+            var p1 = this.controlPoints[1];
+            var p2 = this.controlPoints[2];
+
+            if ((p0.dist(p1) + p1.dist(p2)) / p0.dist(p2) <= 1 + (1 / SMOOTHNESS)) {
+                // Base case
+                this.points = this.controlPoints
+            } else {
+                var p01 = p0.combo(0.5, p1)
+                var p12 = p1.combo(0.5, p2)
+                var p012 = p01.combo(0.5, p12)
+
+                var left = new Curve([p0, p01, p012])
+                left.compile()
+                var right = new Curve([p012, p12, p2])
+                right.compile()
+                this.points = left.points.concat(right.points)
+            }
+
             this.compiled = true;
         }
     }
