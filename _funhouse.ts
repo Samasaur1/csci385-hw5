@@ -165,10 +165,6 @@ class Curve {
         //
 
         if (!this.compiled) {
-            //
-            // COMPLETE THIS CODE!
-            //
-
             var p0 = this.controlPoints[0];
             var p1 = this.controlPoints[1];
             var p2 = this.controlPoints[2];
