@@ -21,6 +21,7 @@
 import { Point3d } from "./_geometry-3d";
 
 type Color = { r: number, g: number, b: number }
+type Bounds = { left: number, right: number, bottom: number, top: number }
 declare function glPushMatrix(): void
 declare function glPopMatrix(): void
 declare function glTranslatef(tx: number, ty: number, tz: number): void
@@ -59,7 +60,7 @@ class Sphere {
         this.radius      = MINIMUM_PLACEMENT_SCALE;
     }
     
-    resize(scale: number, bounds) {
+    resize(scale: number, bounds: Bounds) {
         //
         // Resize the sphere.  Some checks prevent growing it beyond
         // the scene bounds.
@@ -72,7 +73,7 @@ class Sphere {
         this.radius = scale;    
     }
 
-    moveTo(position, bounds) {
+    moveTo(position: Point3d, bounds: Bounds) {
         //
         // Relocate the sphere.  Some checks prevent the object from
         // being placed outside the scene bounds.
@@ -92,7 +93,7 @@ class Sphere {
         return (distance < this.radius*this.radius);
     }
 
-    draw(highlightColor, drawBase, drawShaded: boolean) {
+    draw(highlightColor: Color, drawBase: boolean, drawShaded: boolean) {
         //
         // Draws the sphere within the current WebGL/opengl context.
         //
