@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>a Bézier funhouse</title</title>
+
+    <script id="glsl/trace-vs.c" type="glsl">
+//
+// trace-vs.c
+//
+// Reed College CSCI 385 Computer Graphics Spring 2024
+//
+// This is a vertex shader that is used for rendering a simple
+// ray-traced scene of some spheres and a mirrored object sitting
+// in a room.
+//
+// Most of the ray tracing is performed in its companion fragment shader
+// `trace-fs.c`. The code below basically sends info of the four corners
+// of a quadrilateral so that they can be used as the virtual screen for
+// our ray tracing.
+//
+      
+attribute vec4 corner;
+
+varying vec2  ray_offset;           // Value in [-1,1]^2 for the ray offset.
+      
+uniform vec4  eyePosition;      // Information about the viewer.
+uniform vec4  intoDirection;
+uniform vec4  rightDirection;
+uniform vec4  upDirection;
+      
+uniform vec3  lightColor;       // Color of the light.
+uniform vec4  lightPosition;    // Position of the light.
+
+uniform int   curvedMirror;     // mirror shape (0 = sphere; 1 = curved)
+uniform float sphereData[70];   // Position/size/color of spheres.
+uniform int   numSpheres;       // Number of valid spheres in the above. (0-10)
+      
+uniform float controlPoints[6]; // Control points of the Beziér mirror.
+      
+void main(void) {
+  // Place in right half of WebGL viewport coordinates.
+  gl_Position = vec4(corner.x+0.5, corner.y*2.0, 0.0, 1.0);
+          
+  // Jitter the cast ray by uniform grid of vectors \in [-1,1]^2.
+  ray_offset = vec2(corner.x, corner.y);
+}
+    </script>
+
+    <script id="glsl/trace-fs.c" type="glsl">
+    @TRACE_FS@
+    </script>
+
+    
+    <script id="glsl/vs-varying-color.c" type="glsl">
+//
+// vs-varying-color.c
+//
+// Reed College CSCI 385 Computer Graphics Spring 2022
+//
+// Simple vertex shader that preprocesses per-vertex information for a
+// fragment shader. It expects the color information to vary amongst
+// the vertices of the object.
+//
+// It calculates a position using the supplied vertex positions and the two
+// standard WebGL transforation matrices.
+//
+// It sends the (interpolated) color information to the fragment shader.
+//
+attribute vec4 aVertexPosition;
+attribute vec4 aVertexColor;
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+varying vec4 color;
+
+void main(void) {
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  color = aVertexColor;
+}
+    </script>
+    <script id="glsl/fs-color.c" type="glsl">
+//
+// fs-color.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Simple fragment shader that gets fed a color from the vertex shader.
+// Nothing else is communicated to it from the WebGL program.
+//
+varying lowp vec4 color;
+
+void main(void) {
+  gl_FragColor = color;
+}
+    </script>
+    <script id="glsl/vs-uniform-material.c" type="glsl">
+//
+// vs-uniform-material.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Vertex shader that preprocesses per-vertex information to be fed
+// into a Phong fragment shader. It expects the material's color
+// information to be uniform over all the vertices of the object.
+//
+// It sends this (interpolated) information to the fragment shader:
+// * The position of a fragment of a facet or line object defined by
+//   several vertex positions.
+// * The normal of that surface.
+// * The color of the material.
+//
+// It is fed per-vertex information with attributes for:
+// * vertex position
+// * surface normal at that vertex
+// * material color at that vertex
+//
+attribute vec4 aVertexPosition;   // Corner of some facet of the surface.
+attribute vec4 aVertexNormal;     // Surface normal at that osition.
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+uniform vec4 uMaterialColor;      // Color of material.
+
+varying vec4 position;   // Fragment's surface position.
+varying vec4 normal;     // Fragment's surface normal.
+varying vec4 material;   // Fragment surface's material color.
+varying vec4 place;
+void main() {
+
+  // Transform and interpolate vertex information.
+  position   = uModelViewMatrix * aVertexPosition;
+  normal     = uModelViewMatrix * aVertexNormal;
+  material   = uMaterialColor;
+
+  // The output required by GLSL.
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+
+  place = gl_Position;
+}
+    </script>
+    <script id="glsl/vs-varying-material.c" type="glsl">
+//
+// vs-varying-material.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Vertex shader that preprocesses per-vertex information to be fed
+// into a Phong fragment shader. It expects the material's color
+// information to vary amongst the vertices of the object.
+//
+// It sends this (interpolated) information to the fragment shader:
+// * The position of a fragment of a facet or line object defined by
+//   several vertex positions.
+// * The normal of that surface.
+// * The color of the material.
+//
+// It is fed per-vertex information with attributes for:
+// * vertex position
+// * surface normal at that vertex
+// * material color at that vertex
+//
+attribute vec4 aVertexPosition;   // Corner of some facet of the surface.
+attribute vec4 aVertexNormal;     // Surface normal at that position.
+attribute vec4 aVertexMaterial;   // Color of material at that position.
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+
+varying vec4 position;   // Fragment's surface position.
+varying vec4 normal;     // Fragment's surface normal.
+varying vec4 material;   // Fragment surface's material color.
+varying vec4 place;
+
+void main() {
+
+  // Transform and interpolate vertex information.
+  position   = uModelViewMatrix * aVertexPosition;
+  normal     = uModelViewMatrix * aVertexNormal;
+  material   = aVertexMaterial;
+
+  // The output required by GLSL.
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  place = gl_Position;
+
+}
+    </script>
+    <script id="glsl/fs-phong.c" type="glsl">
+//
+// fs-phong.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Fragment shader that performs a variant of Phong shading.
+//
+// It is fed position, material color, and normal info from the vertex shader.
+// It is also fed the following uniform information from the WebGL program:
+//  * The color of the ambient light.
+//  * Characteristics of a single light source (LIGHT0), namely:
+//    + its color
+//    + its position
+//    + whether (the specular component of) that light is on/off
+//  * The reflectance characteristics of the matrial, namely:
+//    + how much of it is diffuse
+//    + how much of it is specular
+//    + how shiny the surface is ("shininess" as employed by the Phong model)
+// It uses all this info to calculate the fragment color at its surface point.
+//
+
+precision highp float;
+
+varying vec4 position;   // Fragment's surface position.
+varying vec4 normal;     // Fragment's surface normal.
+varying vec4 material;   // Fragment surface's material color.
+
+varying vec4 place;
+
+uniform int  uLight0Enabled;  // Is the light on?
+uniform vec4 uLight0Position; // Location of the light.
+uniform vec4 uLight0Color;    // Light color.
+
+uniform vec4 uAmbientColor;    // Ambient light of environment.
+
+uniform float uMaterialDiffuse;   // Portion of reflection that's diffuse.
+uniform float uMaterialSpecular;  // Portion of reflection that's specular.
+uniform float uMaterialShininess; // Specular highlight control.
+
+void main() {
+
+  vec4 light_color         = uLight0Color;
+  vec4 ambient_light_color = uAmbientColor;
+
+  float diffuse_amount  = uMaterialDiffuse;
+  float specular_amount = uMaterialSpecular;
+  float shininess       = uMaterialShininess;
+
+  vec4 light = uLight0Position;
+  vec4 eye   = vec4(0.0,0.0,10.0,1.0);
+
+  vec4  l = normalize(light - position);
+  vec4  e = normalize(eye - position);
+  vec4  n = normalize(normal);
+  vec4  r = normalize(-l + 2.0 * dot(l,n) * n);
+  float p = pow(max(dot(e,r),0.0),shininess);
+
+  vec4 ambient  = ambient_light_color * material;
+  vec4 diffuse  = diffuse_amount * light_color * material * max(dot(l,n), 0.0);
+  vec4 specular = specular_amount * light_color * p * max(dot(l,n), 0.0);
+
+  if (dot(l,n) > 0.0) {
+    if (uLight0Enabled == 1) {
+      gl_FragColor = ambient + diffuse + specular;
+    } else {
+      gl_FragColor = ambient + diffuse;
+    }
+  } else {
+      gl_FragColor = ambient;
+  }
+}
+    </script>
+
+    <script id="glsl/vs-uniform-color.c" type="glsl">
+//
+// vs-uniform-color.c
+//
+// Reed College CSCI 385 Computer Graphics Spring 2022
+//
+// Simple vertex shader that preprocesses per-vertex information for a
+// fragment shader. It uses the same color information uniformly for
+// all the vertices of the object.
+//
+// It calculates a position using the supplied vertex positions and the two
+// standard WebGL transforation matrices.
+//
+// It sends the color information to the fragment shader.
+//
+attribute vec4 aVertexPosition;
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform vec4 uColor;
+
+varying vec4 color;
+
+void main(void) {
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  color = uColor;
+}
+    </script>
+    <script id="glsl/vs-varying-color.c" type="glsl">
+//
+// vs-varying-color.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Simple vertex shader that preprocesses per-vertex information for a
+// fragment shader. It expects the color information to vary amongst
+// the vertices of the object.
+//
+// It calculates a position using the supplied vertex positions and the two
+// standard WebGL transforation matrices.
+//
+// It sends the (interpolated) color information to the fragment shader.
+//
+attribute vec4 aVertexPosition;
+attribute vec4 aVertexColor;
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+varying vec4 color;
+
+void main(void) {
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  color = aVertexColor;
+}
+    </script>
+    <script id="glsl/fs-color.c" type="glsl">
+//
+// fs-color.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Simple fragment shader that gets fed a color from the vertex shader.
+// Nothing else is communicated to it from the WebGL program.
+//
+varying lowp vec4 color;
+
+void main(void) {
+  gl_FragColor = color;
+}
+    </script>
+    <script id="glsl/vs-uniform-material.c" type="glsl">
+//
+// vs-uniform-material.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Vertex shader that preprocesses per-vertex information to be fed
+// into a Phong fragment shader. It expects the material's color
+// information to be uniform over all the vertices of the object.
+//
+// It sends this (interpolated) information to the fragment shader: 
+// * The position of a fragment of a facet or line object defined by
+//   several vertex positions.
+// * The normal of that surface.
+// * The color of the material.
+//
+// It is fed per-vertex information with attributes for:
+// * vertex position
+// * surface normal at that vertex
+// * material color at that vertex
+//
+attribute vec4 aVertexPosition;   // Corner of some facet of the surface.
+attribute vec4 aVertexNormal;     // Surface normal at that osition.
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+uniform vec4 uMaterialColor;      // Color of material.
+
+varying vec4 position;   // Fragment's surface position.
+varying vec4 normal;     // Fragment's surface normal.
+varying vec4 material;   // Fragment surface's material color. 
+varying vec4 place; 
+void main() {
+  
+  // Transform and interpolate vertex information.
+  position   = uModelViewMatrix * aVertexPosition;
+  normal     = uModelViewMatrix * aVertexNormal;
+  material   = uMaterialColor;
+
+  // The output required by GLSL.
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    
+  place = gl_Position;
+}
+    </script>
+    <script id="glsl/vs-varying-material.c" type="glsl">
+//
+// vs-varying-material.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Vertex shader that preprocesses per-vertex information to be fed
+// into a Phong fragment shader. It expects the material's color
+// information to vary amongst the vertices of the object.
+//
+// It sends this (interpolated) information to the fragment shader:
+// * The position of a fragment of a facet or line object defined by
+//   several vertex positions.
+// * The normal of that surface.
+// * The color of the material.
+//
+// It is fed per-vertex information with attributes for:
+// * vertex position
+// * surface normal at that vertex
+// * material color at that vertex
+//
+attribute vec4 aVertexPosition;   // Corner of some facet of the surface.
+attribute vec4 aVertexNormal;     // Surface normal at that position.
+attribute vec4 aVertexMaterial;   // Color of material at that position.
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+
+varying vec4 position;   // Fragment's surface position.
+varying vec4 normal;     // Fragment's surface normal.
+varying vec4 material;   // Fragment surface's material color.
+varying vec4 place;
+      
+void main() {
+  
+  // Transform and interpolate vertex information.
+  position   = uModelViewMatrix * aVertexPosition;
+  normal     = uModelViewMatrix * aVertexNormal;
+  material   = aVertexMaterial;
+ 
+  // The output required by GLSL.
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  place = gl_Position;    
+    
+}
+    </script>
+    <script id="glsl/fs-phong.c" type="glsl">
+//
+// fs-phong.c
+//
+// Reed College CSCI 385 Computer Graphics Speing 2022
+//
+// Fragment shader that performs a variant of Phong shading.
+//
+// It is fed position, material color, and normal info from the vertex shader.
+// It is also fed the following uniform information from the WebGL program:
+//  * The color of the ambient light.
+//  * Characteristics of a single light source (LIGHT0), namely:
+//    + its color
+//    + its position
+//    + whether (the specular component of) that light is on/off
+//  * The reflectance characteristics of the matrial, namely:
+//    + how much of it is diffuse
+//    + how much of it is specular
+//    + how shiny the surface is ("shininess" as employed by the Phong model)
+// It uses all this info to calculate the fragment color at its surface point.
+//
+
+precision highp float;
+
+varying vec4 position;   // Fragment's surface position.
+varying vec4 normal;     // Fragment's surface normal.
+varying vec4 material;   // Fragment surface's material color.
+
+varying vec4 place;      
+
+uniform int  uLight0Enabled;  // Is the light on?
+uniform vec4 uLight0Position; // Location of the light.
+uniform vec4 uLight0Color;    // Light color.
+
+uniform vec4 uAmbientColor;    // Ambient light of environment.
+
+uniform float uMaterialDiffuse;   // Portion of reflection that's diffuse.
+uniform float uMaterialSpecular;  // Portion of reflection that's specular.
+uniform float uMaterialShininess; // Specular highlight control.
+
+void main() {
+  
+  vec4 light_color         = uLight0Color;
+  vec4 ambient_light_color = uAmbientColor;
+  
+  float diffuse_amount  = uMaterialDiffuse;
+  float specular_amount = uMaterialSpecular;
+  float shininess       = uMaterialShininess;
+  
+  vec4 light = uLight0Position;
+  vec4 eye   = vec4(0.0,0.0,10.0,1.0);
+  
+  vec4  l = normalize(light - position);
+  vec4  e = normalize(eye - position);
+  vec4  n = normalize(normal);
+  vec4  r = normalize(-l + 2.0 * dot(l,n) * n);
+  float p = pow(max(dot(e,r),0.0),shininess);
+  
+  vec4 ambient  = ambient_light_color * material;
+  vec4 diffuse  = diffuse_amount * light_color * material * max(dot(l,n), 0.0);
+  vec4 specular = specular_amount * light_color * p * max(dot(l,n), 0.0);
+
+  if (dot(l,n) > 0.0) {
+    if (uLight0Enabled == 1) {
+      gl_FragColor = ambient + diffuse + specular;
+    } else {
+      gl_FragColor = ambient + diffuse;
+    }
+  } else {
+      gl_FragColor = ambient;
+  }
+}
+    </script>
+    
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.0/jspdf.min.js"></script>
+
+    <script src="gl-matrix-min.js" defer></script>
+    <script src="gl.js" defer></script>
+    <script src="load-shaders.js" defer></script>
+    <script src="opengl.js" defer></script>
+    <script src="geometry-3d.js" defer></script>
+    <script src="funhouse.js" defer></script>
+    <script src="bezier-funhouse.js" defer></script>
+    <script type="text/javascript">
+      function chooseMirror(){
+          const status = document.getElementById("mirror-select").innerText;
+          if (status == "sphere -> bezier") {
+              document.getElementById("mirror-select").innerText = "bezier -> sphere";
+              sphericalMirror(false);
+          } else {
+              document.getElementById("mirror-select").innerText = "sphere -> bezier";
+              sphericalMirror(true);
+          }
+      }
+    </script>
+  </head>
+
+  <body>
+    <canvas id="glcanvas" width="1024" height="512"></canvas><br>
+    <font face="Verdana">
+    <button onClick="chooseColor('adriatic')">adriatic</button>
+    <button onClick="chooseColor('jade')">jade</button>
+    <button onClick="chooseColor('travertine')">travertine</button>
+    <button onClick="chooseColor('amethyst')">amethyst</button>
+    <button onClick="chooseColor('fireball')">fireball</button>
+    mirror:
+    <button value="sphere -> bezier" id="mirror-select" onclick="chooseMirror();">sphere -> bezier</button>
+    <br>
+    Place spheres or else position a <b>Bezier funhouse mirror</b>.<br>
+    Use `ijkl` to control the light position.<br>
+    Use `x` to delete a sphere.<br>
+    SHIFT-click to control the curve of the funhouse mirror.<br>
+  </body>
+</html>
