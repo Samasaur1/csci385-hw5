@@ -586,6 +586,36 @@ ISect rayClosestSphere(vec4 R, vec4 d) {
     return isect;
 }
 
+ISect rayIntersectPanel(vec4 R, vec4 d, vec3 p0, vec3 p1, vec3 normal) {
+    float HEIGHT = 1.5;
+
+    // If the ray is "opposite" the normal
+    ISect hit = rayIntersectPlane(R, d, vec4(p0, 1.0), vec4(normal, 0.0));
+    if (hit.yes == 1) {
+        // Vector along the base of the panel
+        vec3 diff = p1 - p0;
+        // "x" coordinate (along that vector) of the location of the hit
+        float distanceInVector = dot(vec3(hit.location) - p0, diff);
+        if (distanceInVector > EPSILON && length(diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
+            return hit;
+        }
+    }
+
+    // If the ray is "parallel" the normal
+    hit = rayIntersectPlane(R, d, vec4(p0, 1.0), vec4(-normal, 0.0));
+    if (hit.yes == 1) {
+        // Vector along the base of the panel
+        vec3 diff = p1 - p0;
+        // "x" coordinate (along that vector) of the location of the hit
+        float distanceInVector = dot(vec3(hit.location) - p0, diff);
+        if (distanceInVector > EPSILON && length(diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
+            return hit;
+        }
+    }
+
+    return NO_INTERSECTION();
+}
+
 ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
     //
     // This should return intersection information that results
@@ -603,10 +633,16 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
     // the mirror have any height you like. My demo used a
     // height of 1.5.
     //
+    vec3 UP = vec3(0.0, 1.0, 0.0);
 
-    // CHANGE THIS CODE!
+    // TODO: currently this treats the mirror as one big panel
+    // We need to do subdivision
 
-    return NO_INTERSECTION();
+    vec3 p0 = vec3(cp0.x, 0.0, cp0.y);
+    vec3 p1 = vec3(cp2.x, 0.0, cp2.y);
+    vec3 diff = p1 - p0;
+    vec3 norm = cross(diff, UP);
+    return rayIntersectPanel(R, d, p0, p1, normalize(norm));
 }
 
 ISect rayIntersectMirror(vec4 R, vec4 d) {
