@@ -596,7 +596,8 @@ ISect rayIntersectPanel(vec4 R, vec4 d, vec3 p0, vec3 p1, vec3 normal) {
         vec3 diff = p1 - p0;
         // "x" coordinate (along that vector) of the location of the hit
         float distanceInVector = dot(vec3(hit.location) - p0, diff);
-        if (distanceInVector > EPSILON && length(diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
+        // I don't understand why this is length^2 (diff dotted with itself) instead of just length
+        if (distanceInVector > EPSILON && dot(diff, diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
             return hit;
         }
     }
@@ -608,12 +609,104 @@ ISect rayIntersectPanel(vec4 R, vec4 d, vec3 p0, vec3 p1, vec3 normal) {
         vec3 diff = p1 - p0;
         // "x" coordinate (along that vector) of the location of the hit
         float distanceInVector = dot(vec3(hit.location) - p0, diff);
-        if (distanceInVector > EPSILON && length(diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
+        // I don't understand why this is length^2 (diff dotted with itself) instead of just length
+        if (distanceInVector > EPSILON && dot(diff, diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
             return hit;
         }
     }
 
     return NO_INTERSECTION();
+}
+
+void subdivide5(inout vec2[3] into, vec2 p0, vec2 p1, vec2 p2) {
+    into[0] = p0;
+    into[1] = p1;
+    into[2] = p2;
+}
+
+void subdivide4(inout vec2[6] into, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    const int LENGTH = 3;
+
+    vec2 left[LENGTH];
+    subdivide5(left, p0, p01, p012);
+    vec2 right[LENGTH];
+    subdivide5(right, p012, p12, p2);
+
+    for (int i = 0; i < LENGTH + LENGTH; ++i) {
+        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
+    }
+}
+
+void subdivide3(inout vec2[12] into, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    const int LENGTH = 6;
+
+    vec2 left[LENGTH];
+    subdivide4(left, p0, p01, p012);
+    vec2 right[LENGTH];
+    subdivide4(right, p012, p12, p2);
+
+    for (int i = 0; i < LENGTH + LENGTH; ++i) {
+        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
+    }
+}
+
+void subdivide2(inout vec2[24] into, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    const int LENGTH = 12;
+
+    vec2 left[LENGTH];
+    subdivide3(left, p0, p01, p012);
+    vec2 right[LENGTH];
+    subdivide3(right, p012, p12, p2);
+
+    for (int i = 0; i < LENGTH + LENGTH; ++i) {
+        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
+    }
+}
+
+void subdivide1(inout vec2[48] into, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    const int LENGTH = 24;
+
+    vec2 left[LENGTH];
+    subdivide2(left, p0, p01, p012);
+    vec2 right[LENGTH];
+    subdivide2(right, p012, p12, p2);
+
+    for (int i = 0; i < LENGTH + LENGTH; ++i) {
+        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
+    }
+}
+
+void subdivide(inout vec2[96] into, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    const int LENGTH = 48;
+
+    vec2 left[LENGTH];
+    subdivide1(left, p0, p01, p012);
+    vec2 right[LENGTH];
+    subdivide1(right, p012, p12, p2);
+
+    for (int i = 0; i < LENGTH + LENGTH; ++i) {
+        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
+    }
 }
 
 ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
@@ -633,16 +726,28 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
     // the mirror have any height you like. My demo used a
     // height of 1.5.
     //
-    vec3 UP = vec3(0.0, 1.0, 0.0);
+    const vec3 UP = vec3(0.0, 1.0, 0.0);
+    const int POINT_COUNT = 96;
 
-    // TODO: currently this treats the mirror as one big panel
-    // We need to do subdivision
+    vec2 points[POINT_COUNT];
+    subdivide(points, cp0, cp1, cp2);
 
-    vec3 p0 = vec3(cp0.x, 0.0, cp0.y);
-    vec3 p1 = vec3(cp2.x, 0.0, cp2.y);
-    vec3 diff = p1 - p0;
-    vec3 norm = cross(diff, UP);
-    return rayIntersectPanel(R, d, p0, p1, normalize(norm));
+    for (int i = 0; i < POINT_COUNT; ++i) {
+        vec2 _p0 = points[i];
+        vec3 p0 = vec3(_p0.x, 0.0, _p0.y);
+        vec2 _p1 = points[i+1];
+        vec3 p1 = vec3(_p1.x, 0.0, _p1.y);
+
+        vec3 norm = normalize(cross(p1 - p0, UP));
+
+        ISect hit = rayIntersectPanel(R, d, p0, p1, norm);
+
+        if (hit.yes == 1) {
+            return hit;
+        }
+    }
+
+    return NO_INTERSECTION();
 }
 
 ISect rayIntersectMirror(vec4 R, vec4 d) {
