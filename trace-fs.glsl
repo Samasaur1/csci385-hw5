@@ -368,6 +368,8 @@ bool rayHitsSphereBefore(vec4 R, vec4 d, vec4 C, float r, float limit) {
         HITS_ANY = HITS_ANY || rhs_hits;                                                \
     };
 
+ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2);
+
 bool rayHitsBezierBefore(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2, float distance) {
     //
     // This should return `true` if shooting a ray from point
@@ -382,9 +384,11 @@ bool rayHitsBezierBefore(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2, float dis
     // This is used to see the mirror's shadow.
     //
 
-    // CHANGE THIS CODE!
+    // if we wanted to be really efficient, we should duplicate the implementation without the slerp
+    ISect i = rayIntersectBezier(R, d, cp0, cp1, cp2);
+    if (i.yes == 0) return false;
 
-    return false; // No shadow.
+    return i.distance < distance;
 }
 
 bool rayHitsMirrorBefore(vec4 R, vec4 d, float distance) {
