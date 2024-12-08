@@ -750,14 +750,20 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
 
         if (hit.yes == 1) {
             if (i >= POINT_COUNT - 3) { return hit; }
+
+            // Compute the proportion of the hit location across this panel
             // float t = distance(vec2(hit.location.xz), _p0) / distance(_p0, _p1);
             vec2 l = vec2(hit.location.xz);
             float sum = distance(l ,_p0) + distance(l, _p1);
             float s0 = distance(l, _p0) / sum;
             float s1 = distance(l, _p1) / sum;
+
+            // Compute the normal of the next panel
             vec2 _p2 = points[i+2];
             vec3 p2 = vec3(_p2.x, 0.0, _p2.y);
             vec3 next_norm = normalize(cross(p2 - p1, UP));
+
+            // Take an affine combination of the normals
             vec3 new_norm = norm * s0 + next_norm * s1;
             hit.normal = vec4(new_norm, 0.0);
             return hit;
