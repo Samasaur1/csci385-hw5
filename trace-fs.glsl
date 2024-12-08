@@ -732,11 +732,13 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
     //
     const vec3 UP = vec3(0.0, 1.0, 0.0);
     const int POINT_COUNT = 96;
+    // const int POINT_COUNT = 48;
 
     vec2 points[POINT_COUNT];
     subdivide(points, cp0, cp1, cp2);
+    // subdivide1(points, cp0, cp1, cp2);
 
-    for (int i = 0; i < POINT_COUNT; ++i) {
+    for (int i = 0; i < POINT_COUNT - 1; ++i) {
         vec2 _p0 = points[i];
         vec3 p0 = vec3(_p0.x, 0.0, _p0.y);
         vec2 _p1 = points[i+1];
@@ -744,9 +746,24 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
 
         vec3 norm = normalize(cross(p1 - p0, UP));
 
+        // if (i == 0) {
+        //     norm = normalize(cross(vec3(cp0.x, 0.0, cp0.y) - vec3(cp1.x, 0.0, cp1.y), UP));
+        // }
+
         ISect hit = rayIntersectPanel(R, d, p0, p1, norm);
 
         if (hit.yes == 1) {
+            if (i >= POINT_COUNT - 3) { return hit; }
+            // float t = distance(vec2(hit.location.xz), _p0) / distance(_p0, _p1);
+            vec2 l = vec2(hit.location.xz);
+            float sum = distance(l ,_p0) + distance(l, _p1);
+            float s0 = distance(l, _p0) / sum;
+            float s1 = distance(l, _p1) / sum;
+            vec2 _p2 = points[i+2];
+            vec3 p2 = vec3(_p2.x, 0.0, _p2.y);
+            vec3 next_norm = normalize(cross(p2 - p1, UP));
+            vec3 new_norm = norm * s0 + next_norm * s1;
+            hit.normal = vec4(new_norm, 0.0);
             return hit;
         }
     }
