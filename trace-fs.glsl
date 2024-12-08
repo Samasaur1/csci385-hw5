@@ -601,7 +601,7 @@ ISect rayIntersectPanel(vec4 R, vec4 d, vec3 p0, vec3 p1, vec3 normal) {
         // "x" coordinate (along that vector) of the location of the hit
         float distanceInVector = dot(vec3(hit.location) - p0, diff);
         // I don't understand why this is length^2 (diff dotted with itself) instead of just length
-        if (distanceInVector > EPSILON && dot(diff, diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
+        if (distanceInVector > EPSILON && dot(diff, diff) + EPSILON > distanceInVector && HEIGHT + EPSILON > hit.location.y && hit.location.y > EPSILON) {
             return hit;
         }
     }
@@ -614,7 +614,7 @@ ISect rayIntersectPanel(vec4 R, vec4 d, vec3 p0, vec3 p1, vec3 normal) {
         // "x" coordinate (along that vector) of the location of the hit
         float distanceInVector = dot(vec3(hit.location) - p0, diff);
         // I don't understand why this is length^2 (diff dotted with itself) instead of just length
-        if (distanceInVector > EPSILON && dot(diff, diff) > distanceInVector && HEIGHT > hit.location.y && hit.location.y > EPSILON) {
+        if (distanceInVector > EPSILON && dot(diff, diff) + EPSILON > distanceInVector && HEIGHT + EPSILON > hit.location.y && hit.location.y > EPSILON) {
             return hit;
         }
     }
@@ -745,10 +745,6 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
         vec3 p1 = vec3(_p1.x, 0.0, _p1.y);
 
         vec3 norm = normalize(cross(p1 - p0, UP));
-
-        // if (i == 0) {
-        //     norm = normalize(cross(vec3(cp0.x, 0.0, cp0.y) - vec3(cp1.x, 0.0, cp1.y), UP));
-        // }
 
         ISect hit = rayIntersectPanel(R, d, p0, p1, norm);
 
