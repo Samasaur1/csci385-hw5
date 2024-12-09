@@ -622,96 +622,17 @@ ISect rayIntersectPanel(vec4 R, vec4 d, vec3 p0, vec3 p1, vec3 normal) {
     return NO_INTERSECTION();
 }
 
-void subdivide5(inout vec2[3] into, vec2 p0, vec2 p1, vec2 p2) {
-    into[0] = p0;
-    into[1] = p1;
-    into[2] = p2;
-}
-
-void subdivide4(inout vec2[6] into, vec2 p0, vec2 p1, vec2 p2) {
-    vec2 p01 = p0 + ((p1 - p0) / 2.0);
-    vec2 p12 = p2 + ((p1 - p2) / 2.0);
-    vec2 p012 = p01 + ((p12 - p01) / 2.0);
-
-    const int LENGTH = 3;
-
-    vec2 left[LENGTH];
-    subdivide5(left, p0, p01, p012);
-    vec2 right[LENGTH];
-    subdivide5(right, p012, p12, p2);
-
-    for (int i = 0; i < LENGTH + LENGTH; ++i) {
-        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
-    }
-}
-
-void subdivide3(inout vec2[12] into, vec2 p0, vec2 p1, vec2 p2) {
-    vec2 p01 = p0 + ((p1 - p0) / 2.0);
-    vec2 p12 = p2 + ((p1 - p2) / 2.0);
-    vec2 p012 = p01 + ((p12 - p01) / 2.0);
-
-    const int LENGTH = 6;
-
-    vec2 left[LENGTH];
-    subdivide4(left, p0, p01, p012);
-    vec2 right[LENGTH];
-    subdivide4(right, p012, p12, p2);
-
-    for (int i = 0; i < LENGTH + LENGTH; ++i) {
-        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
-    }
-}
-
-void subdivide2(inout vec2[24] into, vec2 p0, vec2 p1, vec2 p2) {
-    vec2 p01 = p0 + ((p1 - p0) / 2.0);
-    vec2 p12 = p2 + ((p1 - p2) / 2.0);
-    vec2 p012 = p01 + ((p12 - p01) / 2.0);
-
-    const int LENGTH = 12;
-
-    vec2 left[LENGTH];
-    subdivide3(left, p0, p01, p012);
-    vec2 right[LENGTH];
-    subdivide3(right, p012, p12, p2);
-
-    for (int i = 0; i < LENGTH + LENGTH; ++i) {
-        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
-    }
-}
-
-void subdivide1(inout vec2[48] into, vec2 p0, vec2 p1, vec2 p2) {
-    vec2 p01 = p0 + ((p1 - p0) / 2.0);
-    vec2 p12 = p2 + ((p1 - p2) / 2.0);
-    vec2 p012 = p01 + ((p12 - p01) / 2.0);
-
-    const int LENGTH = 24;
-
-    vec2 left[LENGTH];
-    subdivide2(left, p0, p01, p012);
-    vec2 right[LENGTH];
-    subdivide2(right, p012, p12, p2);
-
-    for (int i = 0; i < LENGTH + LENGTH; ++i) {
-        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
-    }
-}
-
-void subdivide(inout vec2[96] into, vec2 p0, vec2 p1, vec2 p2) {
-    vec2 p01 = p0 + ((p1 - p0) / 2.0);
-    vec2 p12 = p2 + ((p1 - p2) / 2.0);
-    vec2 p012 = p01 + ((p12 - p01) / 2.0);
-
-    const int LENGTH = 48;
-
-    vec2 left[LENGTH];
-    subdivide1(left, p0, p01, p012);
-    vec2 right[LENGTH];
-    subdivide1(right, p012, p12, p2);
-
-    for (int i = 0; i < LENGTH + LENGTH; ++i) {
-        into[i] = i < LENGTH ? left[i] : right[i - LENGTH];
-    }
-}
+ISect subdivisionCheck(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck1(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck2(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck3(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck4(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck5(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck6(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck7(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck8(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck9(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
+ISect subdivisionCheck10(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2);
 
 ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
     //
@@ -730,47 +651,138 @@ ISect rayIntersectBezier(vec4 R, vec4 d, vec2 cp0, vec2 cp1, vec2 cp2) {
     // the mirror have any height you like. My demo used a
     // height of 1.5.
     //
+
+    return subdivisionCheck8(R, d, cp0, cp1, cp2);
+}
+
+ISect subdivisionCheck(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
     const vec3 UP = vec3(0.0, 1.0, 0.0);
-    const int POINT_COUNT = 96;
-    // const int POINT_COUNT = 48;
 
-    vec2 points[POINT_COUNT];
-    subdivide(points, cp0, cp1, cp2);
-    // subdivide1(points, cp0, cp1, cp2);
+    vec3 cp0 = vec3(p0.x, 0.0, p0.y);
+    vec3 cp1 = vec3(p1.x, 0.0, p1.y);
+    vec3 cp2 = vec3(p2.x, 0.0, p2.y);
 
-    for (int i = 0; i < POINT_COUNT - 1; ++i) {
-        vec2 _p0 = points[i];
-        vec3 p0 = vec3(_p0.x, 0.0, _p0.y);
-        vec2 _p1 = points[i+1];
-        vec3 p1 = vec3(_p1.x, 0.0, _p1.y);
+    vec3 norm01 = normalize(cross(cp1 - cp0, UP));
+    vec3 norm12 = normalize(cross(cp2 - cp1, UP));
 
-        vec3 norm = normalize(cross(p1 - p0, UP));
+    ISect hit = rayIntersectPanel(R, d, cp0, cp1, norm01);
+    if (hit.yes == 1) {
+        float t = distance(vec2(hit.location.xz), p0) / distance(p0, p1);
 
-        ISect hit = rayIntersectPanel(R, d, p0, p1, norm);
+        hit.normal = vec4(norm01 * (1.0 - t) + norm12 * t, 0.0);
+        return hit;
+    }
 
-        if (hit.yes == 1) {
-            if (i >= POINT_COUNT - 3) { return hit; }
+    hit = rayIntersectPanel(R, d, cp1, cp2, norm12);
+    if (hit.yes == 1) {
+        float t = distance(vec2(hit.location.xz), p1) / distance(p1, p2);
 
-            // Compute the proportion of the hit location across this panel
-            // float t = distance(vec2(hit.location.xz), _p0) / distance(_p0, _p1);
-            vec2 l = vec2(hit.location.xz);
-            float sum = distance(l ,_p0) + distance(l, _p1);
-            float s0 = distance(l, _p0) / sum;
-            float s1 = distance(l, _p1) / sum;
-
-            // Compute the normal of the next panel
-            vec2 _p2 = points[i+2];
-            vec3 p2 = vec3(_p2.x, 0.0, _p2.y);
-            vec3 next_norm = normalize(cross(p2 - p1, UP));
-
-            // Take an affine combination of the normals
-            vec3 new_norm = norm * s0 + next_norm * s1;
-            hit.normal = vec4(new_norm, 0.0);
-            return hit;
-        }
+        hit.normal = vec4(norm01 * t + norm12 * (1.0 - t), 0.0);
+        return hit;
     }
 
     return NO_INTERSECTION();
+}
+
+ISect subdivisionCheck1(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck2(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck1(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck1(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck3(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck2(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck2(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck4(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck3(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck3(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck5(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck4(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck4(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck6(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck5(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck5(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck7(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck6(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck6(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck8(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck7(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck7(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck9(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck8(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck8(R, d, p012, p12, p2);
+}
+ISect subdivisionCheck10(vec4 R, vec4 d, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 p01 = p0 + ((p1 - p0) / 2.0);
+    vec2 p12 = p2 + ((p1 - p2) / 2.0);
+    vec2 p012 = p01 + ((p12 - p01) / 2.0);
+
+    ISect hit = subdivisionCheck9(R, d, p0, p01, p012);
+    if (hit.yes == 1) { return hit; }
+
+    return subdivisionCheck9(R, d, p012, p12, p2);
 }
 
 ISect rayIntersectMirror(vec4 R, vec4 d) {
